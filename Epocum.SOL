@@ -1,0 +1,247 @@
+pragma solidity ^0.4.10;
+
+//to decentralize connectivity epocum network works behind this decentralized contract implementation, so behind events. Also for minimize gas payment for the entire network.
+contract decentralizedNetwork {
+
+    event UserAcceptance(address user, string ipfsRedirectLink, address smartAd); 
+    event addConnection(string ip, string website,address smartContract);
+     
+    function addVirtualConnection(string ip, string website,address smartContract) public {
+         addConnection(ip, website, smartContract); 
+     }
+ 
+}
+
+contract epocum is decentralizedNetwork {
+ 
+    uint public usrs = 0;
+    uint public webs = 0;
+    uint public smartCount = 0;
+    uint public $web;
+    address public _epocumca;
+
+    function epocum() public{
+       $web = 0;
+       _epocumca = msg.sender;
+      
+    }
+    
+     struct Websites {
+		string url;
+		bool cert;
+	}
+	
+    struct Users {
+		string ipfs;
+		address wallet;
+		bytes32 rndCode;
+		uint id;
+		uint numWebsites;
+		uint numSmartAdv;
+	}
+
+    struct AdvContract {
+		address addr;
+		address proprietary;
+		string ipfsUser;
+		string website;
+		bool isActive;
+	}
+	
+    mapping (uint => Users) UsersById;
+    mapping (address => Users) UsersByAddr;
+    
+    mapping (address => mapping (uint => Websites)) WebChain;
+    mapping (uint => AdvContract) SmartChain;
+    
+    mapping (address => mapping (uint => AdvContract)) SmartAds;
+ 
+    function () payable public {
+        uint amount = msg.value;
+    }
+
+    function resetEpocumca(address _newEpocum)  public constant returns (bool) {
+        if (msg.sender != _epocumca) revert();
+		 _epocumca = _newEpocum;
+	}
+	
+    function isEpocumCa() public constant returns (bool) {
+		return msg.sender == _epocumca;
+	}
+
+    function RandomGen(uint seed, uint size) public constant returns (uint randomNumber) {
+        uint n = 0;
+        for (uint i = 0; i < size; i++){
+            if (uint(keccak256(block.blockhash(block.number-i-1), seed ))%2==0)
+                n += 2**i;
+        }
+        return n;
+    }
+    
+    function rndString(uint _int) public constant returns (bytes32 stringa) {
+        stringa = keccak256(_int);
+    }
+    
+    function addUser(string ipfs) public {
+	    usrs++;
+	    uint bigInt = RandomGen(30,30);
+	    bytes32 rndCode = rndString(bigInt);
+	    UsersByAddr[msg.sender] = Users(ipfs,msg.sender,rndCode,0,usrs,0);
+	} 
+	
+	function addWeb(string myWebsite) public {
+	    uint idx = UsersByAddr[msg.sender].numWebsites;
+	    uint x = idx + 1;
+	    WebChain[msg.sender][x].url = myWebsite;
+	    WebChain[msg.sender][x].cert = false;
+	    UsersByAddr[msg.sender].numWebsites = x;
+	    webs++;
+	}
+	
+	function createSmartAd (string link,address myToken, uint amountShare,uint target) public returns (address newSmartAd) {
+        string storage ipfsRoot = UsersByAddr[msg.sender].ipfs;
+        newSmartAd = new SmartAd(link,myToken,ipfsRoot,amountShare,target);
+        uint xa = UsersByAddr[msg.sender].numSmartAdv;
+        uint xb = xa + 1;
+        address addrSmartAdv = newSmartAd;
+        uint nSmart = smartCount + 1;
+        SmartChain[nSmart] = AdvContract(addrSmartAdv,msg.sender,ipfsRoot,link,true);
+        SmartAds[msg.sender][xb].addr = addrSmartAdv;
+        SmartAds[msg.sender][xb].proprietary = msg.sender;
+        SmartAds[msg.sender][xb].ipfsUser =  ipfsRoot;
+        SmartAds[msg.sender][xb].website = link;
+        SmartAds[msg.sender][xb].isActive = true;
+        UsersByAddr[msg.sender].numSmartAdv = xb;
+        smartCount++;
+    } 
+    
+	function destroyUser() public{
+        uint id = UsersByAddr[msg.sender].id;
+        delete(UsersByAddr[msg.sender]);
+        delete(UsersById[id]);
+	}
+	
+	function set$Web(uint _$web) public {
+	    if (!isEpocumCa()) revert();
+	    $web = _$web;
+	}
+	
+	function getUserFromAddr(address user) public constant returns(string ipfsRoot) {
+	    ipfsRoot = UsersByAddr[user].ipfs;
+	}
+	
+	function getUserFromId(uint idx) public constant returns(string ipfsRoot) {
+	    ipfsRoot = UsersById[idx].ipfs;
+	}
+	
+	function countWebsite(address customer) public constant returns(uint count) {
+        count = UsersByAddr[customer].numWebsites;
+    }
+    
+    function countAllSmartAdv() public constant returns(uint count) {
+        count = smartCount;
+    }
+    
+    function countAllWebsite() public constant returns(uint count) {
+        count = webs;
+    }
+    
+    function countAllUsers() public constant returns(uint count) {
+        count = usrs;
+    }
+    
+    function countSmartAdv(address customer) public constant returns(uint count) {
+        count = UsersByAddr[customer].numSmartAdv;
+    }
+
+    function getSmartAdv(uint id) public constant returns(address smartAddress, address smartOwner) {
+        smartAddress = SmartChain[id].addr;
+        smartOwner = SmartChain[id].proprietary;
+    }
+    
+    function getMySmartAdv(address addr,uint xs) public constant returns(address smartAddress, string smartWebsite, address smartOwner) {
+        smartAddress = SmartAds[addr][xs].addr;
+        smartWebsite = SmartAds[addr][xs].website;
+        smartOwner = SmartAds[addr][xs].proprietary;
+    }
+    
+    function getWebsite(address customer, uint index) public constant returns(string website, bool cert) {
+        website = WebChain[customer][index].url;
+        cert = WebChain[customer][index].cert;
+    }
+
+	function getBigInt() public constant returns(bytes32) {
+    	return UsersByAddr[msg.sender].rndCode;
+	}
+}
+
+contract abstractToken {
+    function transfer(address to, uint256 value)  public constant returns (bool success);
+    function balanceOf(address _owner) public constant returns (uint256 balance);
+}
+
+contract SmartAd is decentralizedNetwork {
+    //EPM token
+    abstractToken myToken;
+    
+	uint public amount;
+	uint public MinAmountForAshare;
+	uint public minViewForAshare;
+	uint public x = 0;
+	string public linkUrl;
+	string public ipfsRoot;
+	address public addrToken;
+	address public theOwner;
+	uint public connTarget;
+	
+	struct links {
+	    address signer;
+		string ipfsLink;
+		bool isIn;
+	}
+	
+	mapping (uint => links) proofById;
+
+	function SmartAd(string link,address myTkn,string ipfsUser, uint amountShare, uint target) public {
+		linkUrl = link;
+		theOwner = msg.sender;
+		ipfsRoot = ipfsUser;
+		myToken = abstractToken(myTkn);
+		addrToken = myToken;
+		MinAmountForAshare = amountShare;
+		connTarget = target;
+	}
+
+	function Acceptance(string ipfsLink) public {
+            uint y = x + 1;
+            proofById[y] = links(msg.sender,ipfsLink,true);
+            UserAcceptance(msg.sender,linkUrl,this);
+            x = y;
+    }
+
+    function getSmartTotal() public constant returns(string Url,address smartOwner, string ipfsUser, address myUsedToken, uint amountShare, uint advCount,uint target) {
+	    Url = linkUrl;
+	    smartOwner = theOwner;
+	    ipfsUser = ipfsRoot;
+	    myUsedToken = addrToken;
+	    amountShare = MinAmountForAshare;
+	    advCount = x;
+	    target = connTarget;
+	}
+	function getCurrentTokenBalance() public constant returns(uint256 balance) {
+	    balance = myToken.balanceOf(this);
+	}
+	function getHashMessage() public constant returns(bytes32 linkHashed) {
+	    linkHashed = keccak256(linkUrl);
+	}
+	function getAllAdvertiserOfThis(uint z) public constant returns (address advertiserAddr) {
+		advertiserAddr = proofById[z].signer;
+	}
+	function importVirtualConnectivity(string ip,string website) public {
+	    addVirtualConnection(ip,website,this);
+	}
+	function sendMyQuote() {
+	        myToken.transfer(msg.sender, amount*10**18);
+	}
+	
+}
