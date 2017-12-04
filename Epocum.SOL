@@ -201,6 +201,7 @@ contract SmartAd is decentralizedNetwork {
 	}
 	
 	mapping (uint => links) proofById;
+	mapping (address => links) proofByAddress;
 
 	function SmartAd(string link,address myTkn,string ipfsUser, uint amountShare, uint target) public {
 		linkUrl = link;
@@ -213,8 +214,10 @@ contract SmartAd is decentralizedNetwork {
 	}
 
 	function Acceptance(string ipfsLink) public {
+	        if (imAlreadyIn()) revert();
             uint y = x + 1;
             proofById[y] = links(msg.sender,ipfsLink,true);
+            proofByAddress[msg.sender] = links(msg.sender,ipfsLink,true);
             UserAcceptance(msg.sender,linkUrl,this);
             x = y;
     }
@@ -234,11 +237,15 @@ contract SmartAd is decentralizedNetwork {
 	function getHashMessage() public constant returns(bytes32 linkHashed) {
 	    linkHashed = keccak256(linkUrl);
 	}
-	function getAllAdvertiserOfThis(uint z) public constant returns (address advertiserAddr) {
+	function getAllAdvertiserOfThis(uint z) public constant returns (address advertiserAddr, string ipfsHash) {
 		advertiserAddr = proofById[z].signer;
+		ipfsHash = proofById[z].ipfsLink;
 	}
 	function importVirtualConnectivity(string ip,string website) public {
 	    addVirtualConnection(ip,website,this);
+	}
+	function imAlreadyIn() public constant returns (bool isIn){
+	   isIn = proofByAddress[msg.sender].isIn;
 	}
 	function sendMyQuote() {
 	        myToken.transfer(msg.sender, amount*10**18);
