@@ -237,9 +237,11 @@ contract SmartAd is decentralizedNetwork {
 	function getHashMessage() public constant returns(bytes32 linkHashed) {
 	    linkHashed = keccak256(linkUrl);
 	}
-	function getAllAdvertiserOfThis(uint z) public constant returns (address advertiserAddr, string ipfsHash) {
+	function getAllAdvertiserOfThis(uint z) public constant returns (address advertiserAddr) {
 		advertiserAddr = proofById[z].signer;
-		ipfsHash = proofById[z].ipfsLink;
+	}
+	function getMyHashShare() public constant returns (string ipfsHash) {
+		ipfsHash = proofByAddress[msg.sender].ipfsLink;
 	}
 	function importVirtualConnectivity(string ip,string website) public {
 	    addVirtualConnection(ip,website,this);
